@@ -356,6 +356,7 @@
         <h2>Diario Privado de Desahogo</h2>
         <textarea id="journal" rows="6" placeholder="¿Cómo te sientes hoy?..."></textarea>
         <button class="btn" onclick="saveNotes()">Guardar Entrada de Hoy</button>
+        <div id="historialDirario" style="margin-top: 20px; text-align: left;"></div>
     </div>
 
     <script>
@@ -483,19 +484,58 @@
             setTimeout(() => document.getElementById('statsSavedMsg').innerText = '', 3000);
         }
 
-        const journal = document.getElementById('journal');
-        journal.value = localStorage.getItem('my_journal') || '';
-
         function saveNotes() {
-            localStorage.setItem('my_journal', journal.value);
-            alert('Tus notas se han guardado con éxito.');
-        }
+  const journalInput = document.getElementById('journal');
+  const text = journalInput.value.trim();
+  if (!text) return alert('Escribe una nota primero.');
 
+  const entries = JSON.parse(localStorage.getItem('my_journal_entries') || '[]');
+  const newEntry = {
+    date: new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    text: text
+  };
+
+  entries.unshift(newEntry);
+  localStorage.setItem('my_journal_entries', JSON.stringify(entries));
+  
+  alert('¡Desahogo guardado con éxito!');
+  journalInput.value = '';
+  renderJournalHistory();
+}
+
+function renderJournalHistory() {
+  let historyContainer = document.getElementById('journalHistory');
+  if (!historyContainer) {
+    const journalInput = document.getElementById('journal');
+    if (journalInput && journalInput.parentElement) {
+      historyContainer = document.createElement('div');
+      historyContainer.id = 'journalHistory';
+      historyContainer.style.cssText = 'margin-top: 20px; text-align: left; max-height: 300px; overflow-y: auto;';
+      journalInput.parentElement.appendChild(historyContainer);
+    }
+  }
+
+  if (!historyContainer) return;
+
+  const entries = JSON.parse(localStorage.getItem('my_journal_entries') || '[]');
+  if (entries.length === 0) {
+    historyContainer.innerHTML = '<p style="opacity: 0.7; font-size: 0.9em;">No hay desahogos anteriores.</p>';
+    return;
+  }
+
+  historyContainer.innerHTML = '<h4 style="margin-bottom: 10px;">Tus desahogos anteriores:</h4>' + entries.map(e => `
+    <div style="background: rgba(255,255,255,0.7); padding: 12px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #9e7777;">
+      <small style="color: #666; font-weight: bold; display: block; margin-bottom: 4px;">${e.date}</small>
+      <p style="margin: 0; color: #333; white-space: pre-wrap;">${e.text}</p>
+    </div>
+  `).join('');
+}
         changeQuote();
         updateProgress();
         renderWeeklyTable();
-
-        // Registro del Service Worker para funcionamiento Offline / PWA
+        renderJournalHistory();
+        
+    // Registro del Service Worker para funcionamiento Offline / PWA
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
                 .then(() => console.log("PWA lista y funcionando"))
